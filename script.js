@@ -23,29 +23,81 @@ const inputDuration = document.querySelector(".form__input--duration");
 const inputCadence = document.querySelector(".form__input--cadence");
 const inputElevation = document.querySelector(".form__input--elevation");
 
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    function (position) {
-      const { latitude } = position.coords;
-      const { longitude } = position.coords;
-      console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
+class App {
+  #map;
+  #mapEvent;
 
-      const coords = [latitude, longitude];
+  constructor() {
+    this.#getPosition();
 
-      const map = L.map("map").setView(coords, 12);
+    form.addEventListener("submit", this.#newWorkout.bind(this));
 
-      L.tileLayer("http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-        maxZoom: 20,
-        subdomains: ["mt0", "mt1", "mt2", "mt3"],
-      }).addTo(map);
+    inputType.addEventListener("change", this.#toggleElevationField);
+  }
 
-      L.marker(coords)
-        .addTo(map)
-        .bindPopup("A pretty CSS popup.<br> Easily customizable.")
-        .openPopup();
-    },
-    function () {
-      console.log("Could not get your position.");
+  #getPosition() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        this.#loadMap.bind(this),
+        function () {
+          console.log("Could not get your position.");
+        }
+      );
     }
-  );
+  }
+
+  #loadMap(position) {
+    const { latitude } = position.coords;
+    const { longitude } = position.coords;
+
+    const coords = [latitude, longitude];
+
+    this.#map = L.map("map").setView(coords, 12);
+
+    L.tileLayer("http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+      maxZoom: 20,
+      subdomains: ["mt0", "mt1", "mt2", "mt3"],
+    }).addTo(this.#map);
+    this.#map.on("click", this.#showForm.bind(this));
+  }
+
+  #showForm(mapE) {
+    this.#mapEvent = mapE;
+    form.classList.remove("hidden");
+    inputDistance.focus();
+  }
+
+  #toggleElevationField() {
+    inputElevation.closest(".form__row").classList.toggle("form__row--hidden");
+    inputCadence.closest(".form__row").classList.toggle("form__row--hidden");
+  }
+
+  #newWorkout(e) {
+    e.preventDefault();
+    //display marker
+    const { lat, lng } = this.#mapEvent.latlng;
+
+    L.marker([lat, lng])
+      .addTo(this.#map)
+      .bindPopup(
+        L.popup({
+          maxWidth: 250,
+          minWidth: 100,
+          autoClose: false,
+          closeOnClick: false,
+          className: "running-popup",
+        })
+      )
+      .setPopupContent("My Map Pin")
+      .openPopup();
+
+    //clear input fields
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        "";
+  }
 }
+
+const app = new App();
